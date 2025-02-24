@@ -1,0 +1,17 @@
+{
+  "name": "04_setup_backend_project",
+  "version": "1.0.0",
+  "description": "mega project",
+  "keywords": [
+    "js",
+    ".",
+    "backend"
+  ],
+  "license": "ISC",
+  "author": "chirag",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
