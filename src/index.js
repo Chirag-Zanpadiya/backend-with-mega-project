@@ -3,11 +3,13 @@
 
 import mongoose from "mongoose";
 import connectDB from "./db/index.js";
-
 import dotenv from "dotenv"
 // iffi fns
 // DB se jab bhi bat karo tab try-catch lagao
 
+
+
+// yaha pe main jo hame .require aur import me conflict na ho isliye package.json me -r wali scrpit add kar di
 dotenv.config({
     path : './env'
 })
@@ -15,7 +17,17 @@ dotenv.config({
 
 
 // connectDB wala fns execute kara diya hai
-connectDB();
+connectDB()
+.then(()=>{
+    app.listen(process.env.PORT || 8000 , ()=>{
+        console.log(`SERVER IS RUNNING AT PORTNUMBER : ${process.env.PORT}`);
+        
+    })
+})
+.catch((err)=>{
+    console.log(`MONGODB CONNECTION FAILED :: ${err}`);                                                                                                      
+    
+});
 
 
 
