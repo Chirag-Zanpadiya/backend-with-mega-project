@@ -1,12 +1,10 @@
-`const asyncHandler = (requestHandler) => {
+const asyncHandler = (requestHandler) => {
   (req, res, next) => {
-    Promise
-    .resolve(requestHandler(req, res, next))
-    .catch((err) => next(err));
+    Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
   };
 };
 
-export { asyncHandler };`
+export { asyncHandler };
 
 // // higher order fns : fn ko variable ki tarah treat karte hai
 // TODO: jo ham bar bar try-catch ke andar jo async await likhte hai usko bar bar na likhana pade isliye ham ye use karte hai
