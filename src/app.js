@@ -38,4 +38,22 @@ app.use(express.static("public"));
 // cookieParser() allows Express to read and manipulate those cookies.
 // Example: If a request has Cookie: sessionId=abc123, this middleware makes it available in req.cookies.sessionId.
 app.use(cookieParser());
+
+
+// Routes
+
+import userRouter from './routes/user.routes.js'
+
+// yaha controllers and routes alag hai isliye middlerware ka use hoga
+
+// Routes declaration
+app.use("/api/v1/users",userRouter)
+
+
+
+// http://localhost:8000/api/v1/users/register
+
+
+
+
 export { app };

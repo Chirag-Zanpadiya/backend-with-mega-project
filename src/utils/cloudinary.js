@@ -1,3 +1,5 @@
+//TODO: isfile ko ham video upload , image upload and photh upload me use karna chahate hai isliye ham utility banaya hai
+
 import { v2 as cloudinary } from "cloudinary";
 
 
@@ -6,7 +8,6 @@ import fs from "fs";
 // yaha pe ham two steps process follow kar rahe hai
 // 1 : multur ke throught ham localfile ko sabse pehle server me temporary rakhege
 // 2 : cludinary ke thorough ham sever -> cloudinary pe upload kar dege
-
 // yaha pe ham server ka localpath leker clodinary per upload kar dege
 
 cloudinary.config({
