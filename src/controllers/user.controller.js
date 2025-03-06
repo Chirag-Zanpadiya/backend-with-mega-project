@@ -5,10 +5,13 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 const registerUser = asyncHandler(async (req, res) => {
   //TODO:step1:get user details from fronted
-
   //   req.body hame direct json deta lene ke liye help karta hai
   //   forn se data ya json data lena ho toh req.body
   const { fullName, username, email, password } = req.body;
+
+  // console.log(`Res.body \n`);
+  // console.log(req.body);
+
   //   jab ap below script ko postmanapi >body>row insert karke dekho terminal me
   // {
   //     "fullName":"Chirag bhila Zanpadiya",
@@ -46,6 +49,9 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "Username or email already exists");
   }
 
+  // console.log(`existedUser \n`);
+  // console.log(existedUser);
+
   //TODO: step4: check for images ,check for the avatar
   // multer hame req.files ka access deta hai
   // multer ne jo local public?temp file store kiya hai useka path mul jayega
@@ -53,7 +59,23 @@ const registerUser = asyncHandler(async (req, res) => {
   // req.files?.avatar[0]?. -->(matlab multer ne localserver per store kar diya hai na )
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+  // console.log(`avatarLocalPath \n`);
+  // console.log(avatarLocalPath);
+
+  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
+
+  // console.log(`coverImageLocalPath \n`);
+  // console.log(coverImageLocalPath);
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar File is required");
@@ -62,6 +84,10 @@ const registerUser = asyncHandler(async (req, res) => {
   //TODO: step5: upload them to cloudinary , check avatar
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  // console.log(`avatar clodinary \n`);
+  // console.log(avatar);
+
   const converImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
@@ -72,8 +98,9 @@ const registerUser = asyncHandler(async (req, res) => {
   // DB se jab bhi bat karoge toh try-catch ka dyan rakho aur  async and await lagao
   const user = await User.create({
     fullName,
+    // yaha sirt hame url chahiye kyu uploadonclodinary toh pura response return karta hai
     avatar: avatar.url,
-    converImage: converImage?.url || "",
+    coverImage: converImage?.url || "",
     email,
     username: username.toLowerCase(),
     password,

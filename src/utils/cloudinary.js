@@ -26,11 +26,11 @@ const uploadOnCloudinary = async (localFilePath) => {
       resource_type: "auto",
     });
     // yaha tak a gaye matlab file upload succesfully
-    console.log(`ek bar response print karao :  ${response}`);
-    console.log(`ek bar response ka url  print karao :  ${response.url}`);
+    // console.log(`response :: utils/cloudinary.js :: response ::  ${response}`);
+    // console.log(`response :: utils/cloudinary.js :: response.url ::    ${response.url}`);
 
     // localfilepath sever se remover kardo
-    // syncs fns hai dekho
+    // syncs fns hai dekhoz
     fs.unlinkSync(localFilePath);
 
     return response;
