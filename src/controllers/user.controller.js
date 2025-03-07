@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-
+import jwt from "jsonwebtoken";
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -168,6 +168,8 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({
     $or: [{ username }, { email }],
   });
+  console.log(`loginuser :: user :- \n`);
+  console.log(user);
 
   if (!user) {
     throw new ApiError(
@@ -191,6 +193,12 @@ const loginUser = asyncHandler(async (req, res) => {
     user._id
   );
 
+  console.log(`AccessToken ::  \n`);
+  console.log(accessToken);
+
+  console.log(`refreshToken :: \n`);
+  console.log(refreshToken);
+
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
@@ -202,6 +210,7 @@ const loginUser = asyncHandler(async (req, res) => {
     secure: true,
   };
 
+  // console.log(user.email);
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
@@ -258,10 +267,86 @@ const logoutUser = asyncHandler(async (req, res) => {
   };
 
   return res
-  .status(200)
-  .clearCookie("accessToken" ,options)
-  .clearCookie("refreshToken" ,options)
-  .json(new ApiResponse(200 , {} , "User logout sucess"))
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logout sucess"));
 });
 
-export { registerUser, loginUser, logoutUser };
+// TODO: yaha pe ham endpoint set karege kyu ki bar bar login karna sahi nahi hai
+// TODO:Endpoint ke liye  following step
+// see notes in access and refreshtoken
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  // cookie se hame wo refreshtoken lena padega
+
+  // ye incomingRefreshToken basically jo user ke pass hai wo hai
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(
+      401,
+      "user.cotroller.js :: refreshAccessToken :: error(!incomingRefreshToken) :: Not Have incomingRefreshToken "
+    );
+  }
+
+  try {
+    // ab yaha pe verify karo ki userwali refreshtoken aur DB store refreshtoken same hai ya nahi
+    // incomingRefreshToken wo jwt.verify karega ga agar valid hai toh usma playload ka data de dega
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user) {
+      throw new ApiError(
+        401,
+        "user.cotroller.js :: refreshAccessToken :: error(!user) :: Not Have user "
+      );
+    }
+
+    if (user?.refreshToken !== incomingRefreshToken) {
+      throw new ApiError(
+        401,
+        "user.cotroller.js :: refreshAccessToken :: error(user.refreshToken != incomingRefreshToken) :: Token dose not match"
+      );
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    // yaha tak agaye matlab ki user ka sabhi validation ho gaya
+    // ab sirt new refretone aur generate kar ne hai
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      user._id
+    );
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken },
+          "user.cotroller.js :: refreshAccessToken :: Success :: Both Token New Generated"
+        )
+      );
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      throw new ApiError(401, "Refresh Token Expired, Please Login Again");
+    }
+    throw new ApiError(
+      401,
+      error?.message ||
+        "user.controller.js :: refreshAccessToken :: error :: Catch Block Error"
+    );
+  }
+});
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken };

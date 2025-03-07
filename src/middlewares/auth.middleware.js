@@ -9,6 +9,9 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
 
+    console.log(`auth.middlerware.js :: token \n`);
+    console.log(token);
+
     if (!token) {
       throw new ApiError(401, "Unauthorized request");
     }
@@ -17,11 +20,16 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
       token,
       process.env.ACCESS_TOKEN_SECRET
     );
+    console.log(`auth.middlerware.js :: decodetoken \n`);
+    console.log(decodedToken);
 
     //   yaha pe id ka access is liye hai ki jan hame generateaccesstoken kiya tha tab ham _id : this.id
     const user = await User.findById(decodedToken?._id).select(
       "-password -refreshToken"
     );
+
+    console.log(`auth.middlerwar.js :: user \n`);
+    console.log(user);
 
     if (!user) {
       // TODO: discuss about fronted
