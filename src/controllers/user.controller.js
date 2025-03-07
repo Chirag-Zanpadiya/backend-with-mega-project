@@ -3,6 +3,31 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+
+    // generating and access and refresh token for the given userid
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    // yaha mene user model ke refreshtoken wali fiend generate refreshtoekn insert kar diya hai
+    user.refreshToken = refreshToken;
+
+    // bu user ka DATA save bhi karana hai
+
+    await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating access ans refresh token"
+    );
+  }
+};
+
 const registerUser = asyncHandler(async (req, res) => {
   //TODO:step1:get user details from fronted
   //   req.body hame direct json deta lene ke liye help karta hai
@@ -125,4 +150,118 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User Regitration Successfully"));
 });
 
-export { registerUser };
+const loginUser = asyncHandler(async (req, res) => {
+  // req.body ->data
+
+  const { email, username, password } = req.body;
+
+  // username or email base login chahte ho ya
+  // TODO: yaha pe chahata hu vi agar email aur username dono nahi hai toh error through kardo
+  if (!email && !username) {
+    throw new ApiError(400, " Username or Email is required");
+  }
+
+  // find the user in the DB
+  // TODO: yaha pe basically is username or email ka data DB hai toh login kar sakata hai
+  //   यह username या email में से कोई भी match होने पर user return कर देगा।
+  // अगर कोई भी match नहीं करता तो null return होगा।
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (!user) {
+    throw new ApiError(
+      404,
+      "This is not valid creadential || This Username or email doesnot exists "
+    );
+  }
+
+  // password check
+  const isPasswordValid = await user.isPasswordCorrect(password);
+  // agar password match nahi ho raha hai pehle jo DB pe pada that wo
+  if (!isPasswordValid) {
+    throw new ApiError(
+      404,
+      "Invalid Credential Plese Check email and password"
+    );
+  }
+
+  // access and refresh Token
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  );
+
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  // send the cookie
+  //
+  const options = {
+    httpOnly: true, // ye cookie sirf server se hi modifieable hoti hai
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
+        "User Loggend In Successfully"
+      )
+    );
+
+  // response to user login succesfully
+});
+
+const logoutUser = asyncHandler(async (req, res) => {
+  // clear cookie
+  // user toh chahiye cookie clear kar ne ke liye but user lauga kaha se
+  // req.body -> yaha toh form ya json data ayega
+  // logut karne ke liye me thodi na logout form fill up karaoga user se
+  // TODO:logout se pehle ek middlerware execute hova hai
+  // Step-by-Step Execution
+  // 1️⃣ User /logout request bhejta hai → Server verifyJWT middleware call karta hai.
+  // 2️⃣ verifyJWT JWT token verify karta hai:
+  // req.cookies.accessToken ya req.header("Authorization") se token extract karta hai.
+  // jwt.verify() se token decode karta hai.
+  // User ki ID extract karta hai (decodedToken._id).
+  // MongoDB se user fetch karta hai aur req.user = user set karta hai.
+  // next() call hota hai → logoutUser function execute hota hai.
+  // 3️⃣ logoutUser function execute hota hai:
+  // Kyunki verifyJWT ne req.user set kar diya tha, ab logoutUser function usko access kar sakta hai.
+  // Refresh token ya cookies ko clear karta hai.
+  // clear refreshtoken
+
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+  .status(200)
+  .clearCookie("accessToken" ,options)
+  .clearCookie("refreshToken" ,options)
+  .json(new ApiResponse(200 , {} , "User logout sucess"))
+});
+
+export { registerUser, loginUser, logoutUser };

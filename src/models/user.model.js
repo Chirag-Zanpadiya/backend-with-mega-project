@@ -78,6 +78,7 @@ userSchema.methods.generateAccessToken = function () {
     // jab method ko call hoga toh token ye data store karega
     {
       // this._id mongoDB wali ID
+      // yaha jab user is method ko call karega ga toh isse pehle DB data store hoga this : curr user ka toh this._id se wo id le le aur _id me store kara dege
       _id: this._id,
       email: this.email,
       username: this.username,
