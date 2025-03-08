@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -349,4 +350,169 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  // fronted ke form se ye values ayegi
+  const { oldPassword, newPassword } = req.body;
+
+  // route se karte time age verifyJWT ka middlerware insert kar duga
+  // waha req.user ka acceess mil jayega
+  const user = await User.findById(req.user?._id);
+
+  const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordValid) {
+    throw new ApiError(
+      400,
+      "user.cotroller.js :: changeCurrentPassword :: error(!passwordnotmathc) :: passwordnotmathc"
+    );
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        {},
+        "user.cotroller.js  :: changeCurrentPassword :: Password change successfully"
+      )
+    );
+});
+
+// agar user loged hai toh duga currrent user
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        await User.findById(req.user?._id).select("-password -refreshToken")
+      )
+    );
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName } = req.body;
+
+  if (!fullName) {
+    throw new ApiError(
+      400,
+      "user.cotroller.js :: updateAccountDetails :: error(!updateAccountDetails) :: fullName is required"
+    );
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName: fullName,
+      },
+    },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user,
+        "user.cotroller.js :: updateAccountDetails :: Success :: Details Updates successfully"
+      )
+    );
+});
+
+// two middlerware : auth.middlerware.js && multer.middlerware.js
+// "user.cotroller.js :: updateAccountDetails :: error(!updateAccountDetails) :: fullName is required"
+//
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  // multer ke through local file se path le liya hai
+  const avatarLocalPath = req.file?.path;
+  if (!avatarLocalPath) {
+    throw new ApiError(
+      400,
+      "user.cotroller.js :: updataUserAvatar :: error(!avatarLocalPath) :: Avatar is required"
+    );
+  }
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!avatar.url) {
+    throw new ApiError(
+      400,
+      "user.cotroller.js :: updataUserAvatar :: error(!avatar.url) :: Avatar cannot upload on cloudinary"
+    );
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { avatar: avatar.url } },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user,
+        "user.cotroller.js :: updataUserAvatar :: success :: avatar updated successfully"
+      )
+    );
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  // multer ke through local file se path le liya hai
+  const coverImageLocalPath = req.file?.path;
+  if (!coverImageLocalPath) {
+    throw new ApiError(
+      400,
+      "user.cotroller.js :: coverImageLocalPath :: error(!coverImageLocalPath) :: coverImageLocalPath is required"
+    );
+  }
+
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!coverImage.url) {
+    throw new ApiError(
+      400,
+      "user.cotroller.js :: updataUsercoverImage :: error(!coverImage.url) :: coverImage cannot upload on cloudinary"
+    );
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { coverImage: coverImage.url } },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user,
+        "user.cotroller.js :: updataUsercoverImage :: success :: coverImage updated successfully"
+      )
+    );
+});
+
+
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+};
