@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { emit } from "process";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -503,7 +504,103 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     );
 });
 
+// ye fns basically jab ap iski profile per jao ge toh pura profile like YT(youtube) jaise
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  // link ke through jo username ayega wo me extract kar duga
+
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(
+      400,
+
+      "user.cotroller.js :: getUserChannelProfile :: error(!username) :: This username dose not exists"
+    );
+  }
+
+  const channel = await User.aggregate([
+    // first of given  username ka document layege
+
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+
+    // this lookup for : kis user ne hamari channel ko subscribe kiya hai
+
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+
+    // hame kis kis channel ko subscribe kiya hai
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+
+    // User model kuch new fields add kar ne ke liye
+
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      },
+    },
+  ]);
+
+  if (!channel?.length) {
+    throw new ApiError(
+      404,
+      "user.cotroller.js :: getUserChannelProfile :: error(!!channel?.length) :: !channel?.length"
+    );
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      channel[0],
+
+      "user.cotroller.js :: getUserChannelProfile :: Success :: Channer fetche Succesfully"
+    )
+  );
+});
 
 export {
   registerUser,
@@ -515,4 +612,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 };
