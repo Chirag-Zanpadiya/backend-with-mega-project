@@ -1,3 +1,6 @@
+// TODO:🤔 Toh fir asyncHandler ka kya fayda?
+// Uska kaam try-catch hataana hai, async hataana nahi.
+
 const asyncHandler = (requestHandler) => {
   return (req, res, next) => {
     Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
@@ -15,6 +18,6 @@ export { asyncHandler };
 //     res.status(error.code || 500).json({
 //       success: true,
 //       message: error.message,
-//     });
+//     }); 
 //   }
 // };

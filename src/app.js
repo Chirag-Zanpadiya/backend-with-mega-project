@@ -17,11 +17,13 @@ app.use(
 // : This middleware allows your Express app to parse JSON data sent in HTTP requests (e.g., in POST and PUT requests).
 // hen a frontend sends JSON data to the backend (e.g., { "name": "Chirag" }), Express doesn't understand it by default.
 // Protects against denial-of-service (DoS) attacks where attackers send large payloads to crash the server.
+// TODO: form se aya huva data yaha handle hota hai
 app.use(express.json({ limit: "32kb" }));
 
 // This middleware allows your Express app to parse URL-encoded form data (e.g., from HTML forms).
 // When a form is submitted with application/x-www-form-urlencoded data (e.g., name=Chirag&age=22), Express needs to extract the values from the request body.
 // This middleware helps convert form data into a JavaScript object.
+// TODO: url se aya huva data yaha handle hota hai
 app.use(express.urlencoded({ extended: true, limit: "32kb" }));
 
 // Purpose: This serves static files like images, CSS, JavaScript, PDFs, etc.
@@ -33,9 +35,12 @@ app.use(express.static("public"));
 // When users log in, authentication tokens (JWT, session IDs) are often stored in cookies.
 // cookieParser() allows Express to read and manipulate those cookies.
 // Example: If a request has Cookie: sessionId=abc123, this middleware makes it available in req.cookies.sessionId.
+// TODO:Haan! cookieParser() ka use tokens (jaise JWT) ko cookies se read karne ke liye hota hai — taaki hum unse user ka data access kar sakein aur authentication/authorization kar sakein.
 app.use(cookieParser());
 
-// Routes
+
+
+// Routes 
 
 import userRouter from "./routes/user.routes.js";
 

@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { emit } from "process";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -354,10 +353,24 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   // fronted ke form se ye values ayegi
   const { oldPassword, newPassword } = req.body;
-
+  console.log(`User At change password req.body`);
+  console.log(req.body);
+  console.log(`User At change password old password`);
+  console.log(req.body.oldPassword);
+  console.log(`User At change password new password`);
+  console.log(req.body.newPassword);
+  
   // route se karte time age verifyJWT ka middlerware insert kar duga
   // waha req.user ka acceess mil jayega
   const user = await User.findById(req.user?._id);
+  console.log(`User At change password`);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+  console.log("user.password is : ");
+  
+  console.log(user.password);
+  
 
   const isPasswordValid = await user.isPasswordCorrect(oldPassword);
 
@@ -602,6 +615,60 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   );
 });
 
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch history fetched successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -613,4 +680,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory
 };
